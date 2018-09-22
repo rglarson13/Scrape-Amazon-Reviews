@@ -49,7 +49,7 @@ scrapeReviews <- function(asin, maxReview = 100, AVPonly = FALSE, mostRecent = T
     html_text() %>%
     as.numeric()
   
-  
+# If more reviews requested than available, adjust the maxReview number  
   if (length(totalReviewCount) > 0) {
     if (maxReview > totalReviewCount) {
       print(paste(maxReview, ' reviews requested, but only ', totalReviewCount, ' reviews available ...', sep = ''))
@@ -60,7 +60,8 @@ scrapeReviews <- function(asin, maxReview = 100, AVPonly = FALSE, mostRecent = T
     print(html)
   }
     
-  
+
+# Iterate through the pages of reviews (10 to a page)  
   if (totalReviewCount > 0) {
     
     for (pageNumber in c(1:ceiling((maxReview - 1) / 10))) {
@@ -102,8 +103,7 @@ scrapeReviews <- function(asin, maxReview = 100, AVPonly = FALSE, mostRecent = T
       
       #    print(paste('Rating:', nrow(reviewRating), '-- Title:', nrow(reviewTitle), '-- Text:', nrow(reviewText)))
       
-      page <- cbind(reviewTitle, reviewText)
-      page <- cbind(page, reviewRating)
+      page <- cbind(reviewTitle, reviewText, reviewRating)
       
       print(paste('Scraping page ', pageNumber, ', found ', nrow(page), ' reviews.', sep = ''))
       
@@ -117,6 +117,7 @@ scrapeReviews <- function(asin, maxReview = 100, AVPonly = FALSE, mostRecent = T
     
   }
   
+# Trim it up if less than a full page requested
   reviews <- as.data.frame(reviews)
   if (maxReview < nrow(reviews)) {
     reviews <- reviews[1:maxReview, ]
