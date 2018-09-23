@@ -64,7 +64,7 @@ scrapeReviews <- function(asin, maxReview = 100, AVPonly = FALSE, mostRecent = T
 # Iterate through the pages of reviews (10 to a page)  
   if (totalReviewCount > 0) {
     
-    for (pageNumber in c(1:ceiling((maxReview - 1) / 10))) {
+    for (pageNumber in c(1:ceiling(maxReview / 10))) {
       
       url <- paste('https://www.amazon.com/product-reviews/', 
                    asin,
@@ -90,20 +90,24 @@ scrapeReviews <- function(asin, maxReview = 100, AVPonly = FALSE, mostRecent = T
         html_nodes('.review-rating') %>%
         html_text()
       
+      reviewDate <- html %>% 
+        html_nodes('.review-date') %>%
+        html_text()
+      
       if (length(reviewTitle) > length(reviewText)) {
         if (length(reviewText) > 0) {
           reviewTitle <- reviewTitle[(length(reviewTitle) - length(reviewText) + 1):length(reviewTitle)]
           reviewRating <- reviewRating[(length(reviewRating) - length(reviewText) + 1):length(reviewRating)]
+          reviewDate <- reviewDate[(length(reviewDate) - length(reviewText) + 1):length(reviewDate)]
         } else {
           reviewTitle <- reviewText
           reviewRating <- reviewText
+          reviewDate <- reviewText
         }
         
       }
       
-      #    print(paste('Rating:', nrow(reviewRating), '-- Title:', nrow(reviewTitle), '-- Text:', nrow(reviewText)))
-      
-      page <- cbind(reviewTitle, reviewText, reviewRating)
+      page <- cbind(reviewTitle, reviewText, reviewRating, reviewDate)
       
       print(paste('Scraping page ', pageNumber, ', found ', nrow(page), ' reviews.', sep = ''))
       
@@ -130,3 +134,13 @@ scrapeReviews <- function(asin, maxReview = 100, AVPonly = FALSE, mostRecent = T
 
 asin <- 'B07FWHJYS4' # ASIN for a Panera coffee pod, because that's what I was drinking when I wrote this script
 reviews <- scrapeReviews(asin, maxReview = 65)
+
+# Save the scraped reviews to a file
+filename <- paste('Amazon Reviews ', asin, ' ', format(Sys.Date(), '%Y-%m-%d'), '.tsv', sep = '')
+write.table(reviews, file = filename, sep = '\t')
+
+# Clean up the rating and date fields
+library(tidyverse)
+reviews <- reviews %>%
+  mutate(reviewRating = as.numeric(str_sub(reviewRating, start = 1, end = 1)),
+         reviewDate = as.Date(str_sub(reviewDate, start = 4, end = -1), '%B %d, %Y'))
