@@ -1,9 +1,11 @@
 # Scrape Amazon Reviews
 
+library(tidyverse)
+
 library(rvest)
 library(curl)
 
-scrapeReviews <- function(asin, maxReview = 100, AVPonly = FALSE, mostRecent = TRUE) {
+scrapeReviews <- function(asin, maxReview = 1000, AVPonly = FALSE, mostRecent = TRUE) {
   "
   Scrape Amazon Reviews by ASIN
 
@@ -14,9 +16,11 @@ scrapeReviews <- function(asin, maxReview = 100, AVPonly = FALSE, mostRecent = T
   maxReview = the first X reviews to grab
   AVPonly = filter to Amazon Verified Purchases or not
   mostRecent = sort by most recent (alternative being most helpful)
-
   "
   
+# How many seconds to sleep between pages
+#    6 seconds is a good number  
+  sleep_timer <- 6 
   
   reviews <- matrix(data = NA, ncol = 0, nrow = 0)
   
@@ -43,12 +47,15 @@ scrapeReviews <- function(asin, maxReview = 100, AVPonly = FALSE, mostRecent = T
                sep = '')  
     
   html <- read_html(url)
+  Sys.sleep(sleep_timer)
   
   totalReviewCount <- html %>% 
     html_nodes('.totalReviewCount') %>%
-    html_text() %>%
-    as.numeric()
+    html_text()
   
+  totalReviewCount <- gsub('[^0-9]', '', totalReviewCount) %>%
+    as.numeric()
+
 # If more reviews requested than available, adjust the maxReview number  
   if (length(totalReviewCount) > 0) {
     if (maxReview > totalReviewCount) {
@@ -77,6 +84,7 @@ scrapeReviews <- function(asin, maxReview = 100, AVPonly = FALSE, mostRecent = T
                    sep = '')
       
       html <- read_html(url)
+      Sys.sleep(sleep_timer)
       
       reviewTitle <- html %>% 
         html_nodes('.review-title') %>%
@@ -109,7 +117,7 @@ scrapeReviews <- function(asin, maxReview = 100, AVPonly = FALSE, mostRecent = T
       
       page <- cbind(reviewTitle, reviewText, reviewRating, reviewDate)
       
-      print(paste('Scraping page ', pageNumber, ', found ', nrow(page), ' reviews.', sep = ''))
+      print(paste('Scraping page ', pageNumber, ' of ', ceiling(totalReviewCount / 10), ', found ', nrow(page), ' reviews.', sep = ''))
       
       if (length(reviews) > 0) {
         reviews <- rbind(reviews, page)
@@ -132,15 +140,17 @@ scrapeReviews <- function(asin, maxReview = 100, AVPonly = FALSE, mostRecent = T
 }
 
 
-asin <- 'B07FWHJYS4' # ASIN for a Panera coffee pod, because that's what I was drinking when I wrote this script
-reviews <- scrapeReviews(asin, maxReview = 65)
+#asin <- 'B07FWHJYS4' # ASIN for a Panera coffee pod, because that's what I was drinking when I wrote this script
+asin <- 'B002CJN0H2' # ASIN for a furnace filter that has a few thousand reviews
+reviews <- scrapeReviews(asin, maxReview = 4000)
 
 # Save the scraped reviews to a file
 filename <- paste('Amazon Reviews ', asin, ' ', format(Sys.Date(), '%Y-%m-%d'), '.tsv', sep = '')
 write.table(reviews, file = filename, sep = '\t')
 
 # Clean up the rating and date fields
-library(tidyverse)
+library(stringr)
+
 reviews <- reviews %>%
   mutate(reviewRating = as.numeric(str_sub(reviewRating, start = 1, end = 1)),
          reviewDate = as.Date(str_sub(reviewDate, start = 4, end = -1), '%B %d, %Y'))
