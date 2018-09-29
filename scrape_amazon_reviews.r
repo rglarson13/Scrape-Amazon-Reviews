@@ -146,11 +146,4 @@ reviews <- scrapeReviews(asin, maxReview = 4000)
 
 # Save the scraped reviews to a file
 filename <- paste('Amazon Reviews ', asin, ' ', format(Sys.Date(), '%Y-%m-%d'), '.tsv', sep = '')
-write.table(reviews, file = filename, sep = '\t')
-
-# Clean up the rating and date fields
-library(stringr)
-
-reviews <- reviews %>%
-  mutate(reviewRating = as.numeric(str_sub(reviewRating, start = 1, end = 1)),
-         reviewDate = as.Date(str_sub(reviewDate, start = 4, end = -1), '%B %d, %Y'))
+write.table(reviews, file = filename, sep = '\t', quote = FALSE)
